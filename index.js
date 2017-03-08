@@ -276,6 +276,37 @@ class RMQ {
             .catch(err => { throw err; });
     }
 
+    /**
+     * Wait for the queue to be created
+     * @param q {String} Queue key
+     * @param action {String} Queue action
+     * @param opts {Object} An object that might carry options for channel.assertQueue
+     * @returns {Promise}
+     */
+    assertQueue(q, action, opts = {}) {
+        const queue = this.queues.filter(arr => arr.name === q)[0];
+        if (!q) {
+            return Promise.reject(`No queue ${q} with action ${action} found`);
+        }
+        return this.channel().then(ch => ch.assertQueue(`${queue.key}.${action}`, opts));
+    }
+
+    /**
+     * Set consuming callback to the queue that might not has been yet created
+     * @param q {String} Queue key
+     * @param action {String} Queue action
+     * @param callback {Function} An object that might carry options for channel.assertQueue
+     */
+    consumeFromWaitQueue(q, action, callback) {
+        const _this = this;
+        _this.assertQueue(q, action)
+            .then(() => {
+                _this.consumeFrom(q, action, (msg, channel) => {
+                    callback(msg, channel);
+                });
+            })
+            .catch((err) => { throw err; });
+    }
 
     _createPolicy(policy) {
         log('_createPolicy(policy');
